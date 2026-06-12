@@ -93,7 +93,6 @@ async function startInjection() {
     // 3. Test de connexion
     log('🔍 Test de connexion Firestore...', 'inf');
     await db.collection('optiflux_data').doc('_ping').set({ value: '"ok"', updatedAt: Date.now() });
-    await db.collection('optiflux_data').doc('_ping').delete();
     log('   ✅ Connexion Firestore opérationnelle', 'ok');
     bar(20);
 
