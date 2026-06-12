@@ -2,39 +2,45 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8"/>
-<title>Opti-Flux — Injection simulation 4 mois</title>
+<title>Opti-Flux — Injection simulation</title>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <style>
   body{font-family:Arial,sans-serif;background:#0f172a;color:#e2e8f0;padding:40px;max-width:700px;margin:auto}
-  h1{color:#f59e0b;letter-spacing:3px;font-size:24px}
-  .card{background:#1e293b;border-radius:12px;padding:24px;margin:20px 0;border:1px solid #334155}
-  .stat{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #334155}
-  .stat:last-child{border:none}
-  .val{color:#f59e0b;font-weight:bold;font-family:monospace}
-  button{background:#f59e0b;color:#000;border:none;padding:16px 32px;border-radius:8px;font-size:18px;font-weight:900;cursor:pointer;width:100%;letter-spacing:2px;margin-top:16px}
+  h1{color:#f59e0b;letter-spacing:3px;font-size:22px}
+  .card{background:#1e293b;border-radius:12px;padding:24px;margin:16px 0;border:1px solid #334155}
+  button{background:#f59e0b;color:#000;border:none;padding:16px 32px;border-radius:8px;font-size:18px;font-weight:900;cursor:pointer;width:100%;margin-top:12px}
   button:disabled{background:#475569;color:#94a3b8;cursor:not-allowed}
-  #log{background:#0f172a;border-radius:8px;padding:16px;font-family:monospace;font-size:13px;min-height:150px;margin-top:16px;border:1px solid #334155;max-height:300px;overflow-y:auto}
+  #log{background:#0f172a;border-radius:8px;padding:16px;font-family:monospace;font-size:13px;min-height:200px;margin-top:12px;border:1px solid #334155;max-height:400px;overflow-y:auto}
   .ok{color:#4ade80}.err{color:#f87171}.inf{color:#94a3b8}.warn{color:#f59e0b}
-  #progress{height:6px;background:#334155;border-radius:3px;margin:12px 0;overflow:hidden}
-  #bar{height:100%;width:0%;background:#f59e0b;border-radius:3px;transition:width .3s}
+  #progress{height:6px;background:#334155;border-radius:3px;margin:10px 0;overflow:hidden}
+  #bar{height:100%;width:0%;background:#f59e0b;border-radius:3px;transition:width .4s}
+  .step{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #1e293b;font-size:13px}
+  .dot{width:10px;height:10px;border-radius:50%;background:#334155;flex-shrink:0}
+  .dot.ok{background:#4ade80}.dot.spin{background:#f59e0b;animation:pulse 1s infinite}
+  .dot.err{background:#ef4444}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 </style>
 </head>
 <body>
-<h1>▦ OPTI-FLUX — SIMULATION 4 MOIS</h1>
+<h1>▦ OPTI-FLUX — INJECTION 4 MOIS</h1>
+
 <div class="card">
-  <h3 style="color:#38bdf8;margin-top:0">Données à injecter — Fév → Mai 2026</h3>
-  <div class="stat"><span>Palettes simulées</span><span class="val">823</span></div>
-  <div class="stat"><span>Mouvements tracés</span><span class="val">3 022</span></div>
-  <div class="stat"><span>Anomalies terrain</span><span class="val">21</span></div>
-  <div class="stat"><span>Conteneurs simulés</span><span class="val">~155</span></div>
-  <div class="stat"><span>Données existantes</span><span class="val">Conservées</span></div>
-</div>
-<div class="card">
+  <div id="step1" class="step"><div class="dot" id="d1"></div><span>Initialisation Firebase</span></div>
+  <div id="step2" class="step"><div class="dot" id="d2"></div><span>Authentification anonyme</span></div>
+  <div id="step3" class="step"><div class="dot" id="d3"></div><span>Attente propagation token (3s)</span></div>
+  <div id="step4" class="step"><div class="dot" id="d4"></div><span>Test écriture Firestore</span></div>
+  <div id="step5" class="step"><div class="dot" id="d5"></div><span>Chargement données existantes</span></div>
+  <div id="step6" class="step"><div class="dot" id="d6"></div><span>Injection des 823 palettes</span></div>
+  <div id="step7" class="step"><div class="dot" id="d7"></div><span>Injection mouvements + anomalies</span></div>
+  <div id="step8" class="step"><div class="dot" id="d8"></div><span>Finalisation</span></div>
   <div id="progress"><div id="bar"></div></div>
-  <button id="btn" onclick="startInjection()">🚀 LANCER L'INJECTION FIREBASE</button>
-  <div id="log"><span class="inf">En attente...</span></div>
+  <button id="btn" onclick="start()">🚀 LANCER L'INJECTION</button>
+</div>
+
+<div class="card">
+  <div id="log"><span class="inf">Prêt — clique sur le bouton pour démarrer.</span></div>
 </div>
 
 <script>
@@ -51,60 +57,97 @@ const CONFIG = {
 
 const logEl = document.getElementById('log');
 function log(msg, cls='inf') {
-  logEl.innerHTML += '<br><span class="'+cls+'">'+msg+'</span>';
+  const d = new Date().toLocaleTimeString();
+  logEl.innerHTML += '<br><span class="'+cls+'">['+d+'] '+msg+'</span>';
   logEl.scrollTop = logEl.scrollHeight;
 }
-function bar(pct) { document.getElementById('bar').style.width=pct+'%'; }
+function bar(pct) { document.getElementById('bar').style.width = pct+'%'; }
+function step(n, state) {
+  const d = document.getElementById('d'+n);
+  d.className = 'dot ' + state;
+}
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-async function startInjection() {
+async function start() {
   const btn = document.getElementById('btn');
   btn.disabled = true;
-  btn.textContent = '⏳ Injection en cours...';
+  btn.textContent = '⏳ En cours...';
   logEl.innerHTML = '';
 
   try {
-    // 1. Init Firebase
-    log('🔥 Initialisation Firebase...', 'inf');
+    // ÉTAPE 1 — Init Firebase
+    step(1,'spin');
+    log('Initialisation Firebase...', 'inf');
     if (!firebase.apps.length) firebase.initializeApp(CONFIG);
     const db   = firebase.firestore();
     const auth = firebase.auth();
-    bar(5);
+    step(1,'ok'); bar(5);
+    log('✅ Firebase initialisé', 'ok');
 
-    // 2. Auth anonyme — OBLIGATOIRE avant toute écriture
-    log('🔐 Authentification anonyme...', 'inf');
-    await new Promise((resolve, reject) => {
-      auth.onAuthStateChanged(async user => {
-        if (user) {
-          log('   ✅ Session existante : ' + user.uid.slice(0,8) + '...', 'ok');
-          resolve(user);
+    // ÉTAPE 2 — Auth anonyme avec attente explicite
+    step(2,'spin');
+    log('Authentification anonyme...', 'inf');
+    
+    const user = await new Promise((resolve, reject) => {
+      const unsubscribe = auth.onAuthStateChanged(async currentUser => {
+        unsubscribe();
+        if (currentUser) {
+          log('✅ Session existante : ' + currentUser.uid.slice(0,12) + '...', 'ok');
+          resolve(currentUser);
         } else {
           try {
+            log('Création session anonyme...', 'inf');
             const cred = await auth.signInAnonymously();
-            log('   ✅ Connecté anonymement : ' + cred.user.uid.slice(0,8) + '...', 'ok');
+            log('✅ Connecté : ' + cred.user.uid.slice(0,12) + '...', 'ok');
             resolve(cred.user);
           } catch(e) {
-            reject(new Error('Auth échouée : ' + e.message));
+            reject(e);
           }
         }
-      }, { onlyOnce: true });
+      });
     });
-    bar(15);
+    step(2,'ok'); bar(15);
 
-    // 3. Test de connexion
-    log('🔍 Test de connexion Firestore...', 'inf');
-    await db.collection('optiflux_data').doc('_ping').set({ value: '"ok"', updatedAt: Date.now() });
-    log('   ✅ Connexion Firestore opérationnelle', 'ok');
-    bar(20);
+    // ÉTAPE 3 — Attendre propagation token (crucial)
+    step(3,'spin');
+    log('Attente propagation token auth (3 secondes)...', 'warn');
+    
+    // Forcer le refresh du token pour s'assurer qu'il est valide
+    await user.getIdToken(true);
+    log('✅ Token rafraîchi', 'ok');
+    await sleep(3000);
+    log('✅ Propagation OK', 'ok');
+    step(3,'ok'); bar(25);
 
-    // 4. Charger données existantes
-    log('📥 Chargement données existantes...', 'inf');
+    // ÉTAPE 4 — Test écriture
+    step(4,'spin');
+    log('Test écriture Firestore...', 'inf');
+    try {
+      await db.collection('optiflux_data').doc('_test_inject').set({
+        value: '"test"',
+        updatedAt: Date.now()
+      });
+      log('✅ Écriture Firestore confirmée', 'ok');
+      step(4,'ok'); bar(35);
+    } catch(e) {
+      log('❌ Écriture échouée : ' + e.message, 'err');
+      log('💡 Vérifie les règles Firebase : allow read, write: if request.auth != null;', 'warn');
+      step(4,'err');
+      btn.disabled = false;
+      btn.textContent = '↺ Réessayer';
+      return;
+    }
+
+    // ÉTAPE 5 — Charger données existantes
+    step(5,'spin');
+    log('Chargement données existantes...', 'inf');
     const getKey = async (k) => {
       try {
         const snap = await db.collection('optiflux_data').doc(k).get();
         if (!snap.exists) return null;
         return JSON.parse(snap.data().value);
       } catch(e) {
-        log('   ⚠ Lecture '+k+' échouée : '+e.message, 'warn');
+        log('⚠️ Lecture '+k+' : '+e.message, 'warn');
         return null;
       }
     };
@@ -113,76 +156,78 @@ async function startInjection() {
     const exLog   = (await getKey('w7_log'))        || [];
     const exAnom  = (await getKey('w7_anomalies'))  || [];
     const exOpLog = (await getKey('w7_oplog'))      || [];
+    log('Palettes existantes : ' + exPal.length, 'ok');
+    log('Mouvements existants : ' + exLog.length, 'ok');
+    step(5,'ok'); bar(50);
 
-    log('   Palettes existantes   : ' + exPal.length, 'ok');
-    log('   Mouvements existants  : ' + exLog.length, 'ok');
-    log('   Anomalies existantes  : ' + exAnom.length, 'ok');
-    bar(35);
+    // Déduplication par ID
+    const exPalIds   = new Set(exPal.map(p => p.id));
+    const exMvIds    = new Set(exLog.map(m => m.id));
+    const exAnomIds  = new Set(exAnom.map(a => a.id));
+    const exOpIds    = new Set(exOpLog.map(o => o.id));
 
-    // 5. Fusion
-    log('⚙️ Fusion des données...', 'inf');
+    const newPal  = DATA.w7_pal.filter(p => !exPalIds.has(p.id));
+    const newMvs  = DATA.w7_log.filter(m => !exMvIds.has(m.id));
+    const newAnoms = DATA.w7_anomalies.filter(a => !exAnomIds.has(a.id));
+    const newOps  = DATA.w7_oplog.filter(o => !exOpIds.has(o.id));
 
-    // Éviter les doublons par ID
-    const existingPalIds = new Set(exPal.map(p => p.id));
-    const newPal = DATA.w7_pal.filter(p => !existingPalIds.has(p.id));
+    log('+' + newPal.length + ' nouvelles palettes à injecter', 'ok');
 
-    const existingMvIds = new Set(exLog.map(m => m.id));
-    const newMvs = DATA.w7_log.filter(m => !existingMvIds.has(m.id));
-
-    const existingAnomIds = new Set(exAnom.map(a => a.id));
-    const newAnoms = DATA.w7_anomalies.filter(a => !existingAnomIds.has(a.id));
-
-    const existingOpIds = new Set(exOpLog.map(o => o.id));
-    const newOps = DATA.w7_oplog.filter(o => !existingOpIds.has(o.id));
-
-    const merged = {
-      w7_pal:       [...exPal, ...newPal],
-      w7_log:       [...exLog, ...newMvs].sort((a,b)=>(a.ts||0)-(b.ts||0)),
-      w7_anomalies: [...exAnom, ...newAnoms],
-      w7_oplog:     [...exOpLog, ...newOps].sort((a,b)=>(a.ts||0)-(b.ts||0)).slice(-2000),
-    };
-
-    log('   Nouvelles palettes    : +' + newPal.length + ' → total ' + merged.w7_pal.length, 'ok');
-    log('   Nouveaux mouvements   : +' + newMvs.length + ' → total ' + merged.w7_log.length, 'ok');
-    log('   Nouvelles anomalies   : +' + newAnoms.length, 'ok');
-    bar(50);
-
-    // 6. Écriture Firebase
-    log('📤 Écriture w7_pal...', 'inf');
+    // ÉTAPE 6 — Injection palettes
+    step(6,'spin');
+    log('Injection palettes...', 'inf');
+    const mergedPal = [...exPal, ...newPal];
     await db.collection('optiflux_data').doc('w7_pal').set({
-      value: JSON.stringify(merged.w7_pal), updatedAt: Date.now()
+      value: JSON.stringify(mergedPal),
+      updatedAt: Date.now()
     });
-    log('   ✅ ' + merged.w7_pal.length + ' palettes écrites', 'ok');
-    bar(65);
+    log('✅ ' + mergedPal.length + ' palettes écrites', 'ok');
+    step(6,'ok'); bar(70);
 
-    log('📤 Écriture w7_log...', 'inf');
+    // ÉTAPE 7 — Mouvements + anomalies
+    step(7,'spin');
+    log('Injection mouvements...', 'inf');
+    const mergedLog = [...exLog, ...newMvs].sort((a,b) => (a.ts||0)-(b.ts||0));
     await db.collection('optiflux_data').doc('w7_log').set({
-      value: JSON.stringify(merged.w7_log), updatedAt: Date.now()
+      value: JSON.stringify(mergedLog),
+      updatedAt: Date.now()
     });
-    log('   ✅ ' + merged.w7_log.length + ' mouvements écrits', 'ok');
-    bar(80);
+    log('✅ ' + mergedLog.length + ' mouvements écrits', 'ok');
 
-    log('📤 Écriture anomalies + oplog...', 'inf');
+    const mergedAnom = [...exAnom, ...newAnoms];
     await db.collection('optiflux_data').doc('w7_anomalies').set({
-      value: JSON.stringify(merged.w7_anomalies), updatedAt: Date.now()
+      value: JSON.stringify(mergedAnom),
+      updatedAt: Date.now()
     });
+
+    const mergedOps = [...exOpLog, ...newOps].sort((a,b) => (a.ts||0)-(b.ts||0)).slice(-2000);
     await db.collection('optiflux_data').doc('w7_oplog').set({
-      value: JSON.stringify(merged.w7_oplog), updatedAt: Date.now()
+      value: JSON.stringify(mergedOps),
+      updatedAt: Date.now()
     });
-    bar(100);
+    log('✅ Anomalies + logs opérateurs écrits', 'ok');
+    step(7,'ok'); bar(90);
+
+    // ÉTAPE 8 — Nettoyage
+    step(8,'spin');
+    log('Nettoyage...', 'inf');
+    // Supprimer le doc de test (si les règles le permettent)
+    try { await db.collection('optiflux_data').doc('_test_inject').delete(); } catch {}
+    step(8,'ok'); bar(100);
 
     log('', 'inf');
     log('🎯 INJECTION TERMINÉE AVEC SUCCÈS !', 'ok');
-    log('   Ouvre Opti-Flux — le tableau de bord affiche 4 mois de données.', 'ok');
-    btn.textContent = '✅ INJECTION RÉUSSIE';
+    log('   823 palettes · 3022 mouvements · 21 anomalies', 'ok');
+    log('   Ouvre Opti-Flux — le tableau de bord est maintenant vivant.', 'ok');
+    btn.textContent = '✅ TERMINÉ';
     btn.style.background = '#16a34a';
     btn.style.color = '#fff';
 
   } catch(e) {
-    log('❌ Erreur : ' + e.message, 'err');
+    log('❌ Erreur inattendue : ' + e.message, 'err');
     console.error(e);
     btn.disabled = false;
-    btn.textContent = '↺ RÉESSAYER';
+    btn.textContent = '↺ Réessayer';
   }
 }
 </script>
